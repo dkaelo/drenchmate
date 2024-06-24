@@ -7,18 +7,18 @@ import 'package:drenchmate/features/record/views/widgets/record_list.dart';
 import 'package:path_provider/path_provider.dart';
 
 class DataPage extends StatefulWidget {
-  const DataPage({Key? key}) : super(key: key);
+  const DataPage({super.key});
 
   @override
   _DataPageState createState() => _DataPageState();
 }
 
 class _DataPageState extends State<DataPage> {
-
   @override
-  void initState(){
-    super.initState();    
-    RecordDatabase.fetchRecords();
+  void initState() {
+    super.initState();
+    // Fetch records during initialization
+    Provider.of<RecordController>(context, listen: false).fetchRecords();
   }
 
   @override
@@ -30,7 +30,7 @@ class _DataPageState extends State<DataPage> {
         actions: [
           IconButton(
             onPressed: () => _exportRecordsToCSV(context),
-            icon: Icon(Icons.file_download),
+            icon: const Icon(Icons.file_download),
           ),
         ],
       ),
@@ -41,7 +41,10 @@ class _DataPageState extends State<DataPage> {
         ),
         child: const Icon(Icons.add),
       ),
-      body: const RecordList(),
+      body: const Padding(
+        padding: EdgeInsets.all(16.0),
+        child: RecordList(),
+      ),
     );
   }
 
@@ -52,7 +55,7 @@ class _DataPageState extends State<DataPage> {
       final filePath = '${directory!.path}/records.csv';
       await RecordDatabase.exportRecordsToTxt(records);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Records exported to CSV'),
         ),
       );

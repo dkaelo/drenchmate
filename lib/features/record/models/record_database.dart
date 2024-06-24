@@ -3,31 +3,21 @@ import 'dart:io';
 import 'package:csv/csv.dart';
 import 'package:drenchmate/features/record/models/record.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:path_provider/path_provider.dart'; // Import the path_provider package
+import 'package:drenchmate/services/database_service.dart';
+
 class RecordDatabase {
-  static late Isar isar;
-
-  static Future<void> initialize() async {
-    final dir = await getApplicationDocumentsDirectory();
-    isar = await Isar.open(
-      [RecordSchema],
-      directory: dir.path,
-      maxSizeMiB: 512,
-    );
-  }
-
   static Future<List<Record>> fetchRecords() async {
-    return await isar.records.where().findAll();
+    return await DatabaseService.isar.records.where().findAll();
   }
 
   static Future<void> addRecord(Record record) async {
-    await isar.writeTxn(() async {
-      await isar.records.put(record);
+    await DatabaseService.isar.writeTxn(() async {
+      await DatabaseService.isar.records.put(record);
     });
   }
 
   static Future<void> updateRecord(int id, Record record) async {
-    final existingRecord = await isar.records.get(id);
+    final existingRecord = await DatabaseService.isar.records.get(id);
     if (existingRecord != null) {
       existingRecord
         ..dateOfTreatment = record.dateOfTreatment
@@ -43,15 +33,15 @@ class RecordDatabase {
         ..expiryDate = record.expiryDate
         ..personAdministering = record.personAdministering;
 
-      await isar.writeTxn(() => isar.records.put(existingRecord));
+      await DatabaseService.isar.writeTxn(() => DatabaseService.isar.records.put(existingRecord));
     }
   }
 
   static Future<void> deleteRecord(int id) async {
-    await isar.writeTxn(() => isar.records.delete(id));
+    await DatabaseService.isar.writeTxn(() => DatabaseService.isar.records.delete(id));
   }
 
-   static Future<void> exportRecordsToCSV(List<Record> records) async {
+  static Future<void> exportRecordsToCSV(List<Record> records) async {
     // Convert records to CSV format
     List<List<dynamic>> csvData = [
       ['Date of Treatment', 'Number of Animals Treated', 'Mob ID', 'Animal Details', 'Product Name', 'Active Ingredient', 'Treatment Rate', 'ESI', 'Withholding Period', 'Batch Number', 'Expiry Date', 'Person Administering']
@@ -93,9 +83,9 @@ class RecordDatabase {
     // Prepare the text content
     StringBuffer txtContent = StringBuffer();
     txtContent.writeln('Date of Treatment\tNumber of Animals Treated\tMob ID\tAnimal Details\tProduct Name\tActive Ingredient\tTreatment Rate\tESI\tWithholding Period\tBatch Number\tExpiry Date\tPerson Administering');
-    records.forEach((record) {
+    for (var record in records) {
       txtContent.writeln('${record.dateOfTreatment}\t${record.numberOfAnimalsTreated}\t${record.mobId}\t${record.animalDetails}\t${record.productName}\t${record.activeIngredient}\t${record.treatmentRate}\t${record.esi}\t${record.withholdingPeriod}\t${record.batchNumber}\t${record.expiryDate}\t${record.personAdministering}');
-    });
+    }
 
     // Allow the user to choose the directory to save the file
     String? directoryPath = await FilePicker.platform.getDirectoryPath();
@@ -114,7 +104,4 @@ class RecordDatabase {
       print('Export canceled. No directory selected.');
     }
   }
-  
 }
-
-
