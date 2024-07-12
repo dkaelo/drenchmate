@@ -11,10 +11,15 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLogin = true;
+  final _newPasswordController = TextEditingController();
   String _errorMessage = '';
+
+  bool isValidPassword(String password) {
+    final regex = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$');
+    return regex.hasMatch(password);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +59,7 @@ class _LoginPageState extends State<LoginPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Container(
-                      width: 250, // Set the width of the input boxes
+                      width: 250,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(10),
@@ -63,14 +68,14 @@ class _LoginPageState extends State<LoginPage> {
                             color: Colors.black.withOpacity(0.2),
                             spreadRadius: 5,
                             blurRadius: 7,
-                            offset: Offset(0, 3),
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
                       child: TextField(
-                        controller: _usernameController,
+                        controller: _emailController,
                         decoration: InputDecoration(
-                          labelText: 'Username',
+                          labelText: 'Email',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -79,7 +84,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 15),
                     Container(
-                      width: 250, // Set the width of the input boxes
+                      width: 250,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(10),
@@ -88,7 +93,7 @@ class _LoginPageState extends State<LoginPage> {
                             color: Colors.black.withOpacity(0.2),
                             spreadRadius: 5,
                             blurRadius: 7,
-                            offset: Offset(0, 3),
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
@@ -103,43 +108,62 @@ class _LoginPageState extends State<LoginPage> {
                         obscureText: true,
                       ),
                     ),
+                    if (userController.isFirstLogin)
+                      Container(
+                        width: 250,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              spreadRadius: 5,
+                              blurRadius: 7,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: TextField(
+                          controller: _newPasswordController,
+                          decoration: InputDecoration(
+                            labelText: 'New Password',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          obscureText: true,
+                        ),
+                      ),
                     const SizedBox(height: 20),
                     Text(_errorMessage, style: const TextStyle(color: Colors.red)),
                     const SizedBox(height: 20),
                     SizedBox(
-                      width: 150, // Set the width of the button
+                      width: 150,
                       child: ElevatedButton(
                         onPressed: () async {
-                          if (_isLogin) {
-                            final success = await userController.login(
-                              _usernameController.text,
-                              _passwordController.text,
-                            );
-                            if (success) {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(builder: (context) => const DashboardPage()),
-                              );
-                            } else {
-                              setState(() {
-                                _errorMessage = 'Invalid username or password';
-                              });
+                          if (userController.isFirstLogin && !isValidPassword(_newPasswordController.text)) {
+                            setState(() {
+                              _errorMessage = 'Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.';
+                            });
+                            return;
+                          }
+
+                          final success = await userController.login(
+                            _emailController.text,
+                            _passwordController.text,
+                          );
+                          if (success) {
+                            if (userController.isFirstLogin) {
+                              await userController.changePassword(_newPasswordController.text);
                             }
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (context) => const DashboardPage()),
+                            );
                           } else {
-                            final success = await userController.register(
-                              _usernameController.text,
-                              _passwordController.text,
-                            );
-                            if (success) {
-                              setState(() {
-                                _isLogin = true;
-                                _errorMessage = 'Registration successful. Please login.';
-                              });
-                            } else {
-                              setState(() {
-                                _errorMessage = 'Username already exists';
-                              });
-                            }
+                            setState(() {
+                              _errorMessage = 'Invalid email or password';
+                            });
                           }
                         },
                         style: ElevatedButton.styleFrom(
@@ -147,33 +171,31 @@ class _LoginPageState extends State<LoginPage> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          padding: const EdgeInsets.symmetric(vertical: 12), // Set padding to make the button smaller
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        child: Text(_isLogin ? 'Login' : 'Register', style: const TextStyle(fontSize: 16)),
+                        child: const Text('Login', style: TextStyle(fontSize: 16)),
                       ),
                     ),
                     TextButton(
                       onPressed: () {
                         setState(() {
-                          _isLogin = !_isLogin;
                           _errorMessage = '';
                         });
                       },
-                      child: Text(_isLogin ? 'Don\'t have an account? Register' : 'Already have an account? Login'),
+                      child: const Text('Forgot Password?'),
                     ),
                   ],
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 20.0),
-              child: const Text(
+            const Padding(
+              padding: EdgeInsets.only(bottom: 20.0),
+              child: Text(
                 'Developed by Deads-X',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w400,
                   color: Colors.black54,
-
                 ),
               ),
             ),

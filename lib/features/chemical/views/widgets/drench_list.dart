@@ -1,18 +1,18 @@
+import 'package:drenchmate/features/chemical/controllers/drench_group_controller.dart';
+import 'package:drenchmate/features/chemical/models/drench_group.dart';
+import 'package:drenchmate/features/chemical/views/drench_group_form.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:drenchmate/features/chemical/controllers/chemical_controller.dart';
-import 'package:drenchmate/features/chemical/models/chemical.dart';
-import 'package:drenchmate/features/chemical/views/chemical_form.dart';
 
-class ChemicalList extends StatelessWidget {
-  const ChemicalList({super.key});
+class DrenchList extends StatelessWidget {
+  const DrenchList({Key? key}) : super(key: key);
 
-  void _confirmDelete(BuildContext context, Chemical chemical) {
+  void _confirmDelete(BuildContext context, DrenchGroup drenchGroup) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirm Deletion'),
-        content: const Text('Are you sure you want to delete this chemical?'),
+        content: const Text('Are you sure you want to delete this drench group?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -20,7 +20,8 @@ class ChemicalList extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              Provider.of<ChemicalController>(context, listen: false).deleteChemical(chemical.id);
+              Provider.of<DrenchGroupController>(context, listen: false)
+                  .deleteDrenchGroup(drenchGroup.id);
               Navigator.of(context).pop();
             },
             child: const Text('Delete'),
@@ -30,23 +31,23 @@ class ChemicalList extends StatelessWidget {
     );
   }
 
-  void _editChemical(BuildContext context, Chemical chemical) {
+  void _editDrenchGroup(BuildContext context, DrenchGroup drenchGroup) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ChemicalForm(chemical: chemical),
+        builder: (context) => DrenchGroupForm(drenchGroup: drenchGroup),
       ),
     );
   }
 
-  void _showMoreOptions(BuildContext context, Chemical chemical, Offset offset) async {
+  void _showMoreOptions(BuildContext context, DrenchGroup drenchGroup, Offset offset) async {
     final result = await showMenu(
       context: context,
       position: RelativeRect.fromLTRB(
         offset.dx,
         offset.dy,
-        offset.dx + 50.0,
-        offset.dy + 50.0,
+        offset.dx + 50.0, // Adjust width as needed
+        offset.dy + 50.0, // Adjust height as needed
       ),
       items: [
         PopupMenuItem(
@@ -74,21 +75,21 @@ class ChemicalList extends StatelessWidget {
 
     if (result != null) {
       if (result == 'edit') {
-        _editChemical(context, chemical);
+        _editDrenchGroup(context, drenchGroup);
       } else if (result == 'delete') {
-        _confirmDelete(context, chemical);
+        _confirmDelete(context, drenchGroup);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final chemicalController = Provider.of<ChemicalController>(context);
+    final drenchGroupController = Provider.of<DrenchGroupController>(context);
 
     return ListView.builder(
-      itemCount: chemicalController.currentChemicals.length,
+      itemCount: drenchGroupController.drenchGroups.length,
       itemBuilder: (context, index) {
-        final chemical = chemicalController.currentChemicals[index];
+        final drenchGroup = drenchGroupController.drenchGroups[index];
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
           child: Padding(
@@ -100,7 +101,7 @@ class ChemicalList extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      chemical.chemicalName,
+                      drenchGroup.name,
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     Builder(
@@ -110,25 +111,22 @@ class ChemicalList extends StatelessWidget {
                           onPressed: () {
                             final RenderBox button = context.findRenderObject() as RenderBox;
                             final Offset offset = button.localToGlobal(Offset.zero);
-                            _showMoreOptions(context, chemical, offset);
+                            _showMoreOptions(context, drenchGroup, offset);
                           },
                         );
                       },
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Active Ingredient: ${chemical.activeIngredient}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                Text(
-                  'ESI: ${chemical.esi} days',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                Text(
-                  'Withholding Period: ${chemical.withholdingPeriod} days',
-                  style: Theme.of(context).textTheme.bodySmall,
+                const SizedBox(height: 8.0),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: drenchGroup.chemicals.map((chemical) {
+                    return Text(
+                      'Chemical: ${chemical.chemicalName}, Active Ingredient: ${chemical.activeIngredient}, ESI: ${chemical.esi} days, Withholding Period: ${chemical.withholdingPeriod} days',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    );
+                  }).toList(),
                 ),
               ],
             ),

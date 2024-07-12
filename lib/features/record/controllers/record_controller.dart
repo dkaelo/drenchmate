@@ -1,27 +1,50 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:drenchmate/features/chemical/models/drench_group.dart';
 import 'package:flutter/material.dart';
-import 'package:drenchmate/features/record/models/record_database.dart';
-import 'package:drenchmate/features/record/models/record.dart';
+import '../models/record.dart';
 
 class RecordController extends ChangeNotifier {
   List<Record> currentRecords = [];
+  List<DrenchGroup> drenchGroups = [];
 
-  void fetchRecords() async {
-    currentRecords = await RecordDatabase.fetchRecords();
-    notifyListeners();
+  Future<void> fetchRecords() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('records').get();
+      currentRecords = snapshot.docs.map((doc) => Record.fromFirestore(doc)).toList();
+      notifyListeners();
+    } catch (e) {
+      print('Error fetching records: $e');
+    }
   }
 
-  void addRecord(Record record) async {
-    await RecordDatabase.addRecord(record);
+  Future<void> fetchDrenchGroups() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('drench_groups').get();
+      drenchGroups = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>?;
+        if (data == null) {
+          throw Exception('Data is null');
+        }
+        return DrenchGroup.fromMap(data, doc.id);
+      }).toList();
+      notifyListeners();
+    } catch (e) {
+      print('Error fetching drench groups: $e');
+    }
+  }
+
+  Future<void> addRecord(Record record) async {
+    await FirebaseFirestore.instance.collection('records').add(record.toFirestore());
     fetchRecords();
   }
 
-  void updateRecord(int id, Record record) async {
-    await RecordDatabase.updateRecord(id, record);
+  Future<void> updateRecord(String id, Record record) async {
+    await FirebaseFirestore.instance.collection('records').doc(id).update(record.toFirestore());
     fetchRecords();
   }
 
-  void deleteRecord(int id) async {
-    await RecordDatabase.deleteRecord(id);
+  Future<void> deleteRecord(String id) async {
+    await FirebaseFirestore.instance.collection('records').doc(id).delete();
     fetchRecords();
   }
 }

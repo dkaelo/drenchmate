@@ -1,34 +1,39 @@
-import 'package:isar/isar.dart';
-import 'package:drenchmate/features/user/models/user.dart';
-import 'package:drenchmate/services/database_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserDatabase {
+  static final CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
+
   static Future<void> initialize() async {
-    final isar = DatabaseService.isar;
+    // Check if any user exists in the users collection
+    final querySnapshot = await usersCollection.limit(1).get();
 
-    // Create default admin user if not exists
-    final adminExists = await isar.users.where().filter().usernameEqualTo('admin').findFirst();
-    if (adminExists == null) {
-      final adminUser = User()
-        ..username = 'admin'
-        ..password = 'admin' // You might want to hash this password
-        ..isAdmin = true;
-
-      await isar.writeTxn(() async {
-        await isar.users.put(adminUser);
-      });
+    // If the collection is empty, add the default admin user
+    if (querySnapshot.docs.isEmpty) {
+      final adminUser = {
+        'username': 'admin@drenchmate.com',
+        'displayName': 'Administrator',
+        'role': 'admin',
+      };
+      await usersCollection.add(adminUser);
     }
   }
 
-  static Future<User?> getUserByUsername(String username) async {
-    final isar = DatabaseService.isar;
-    return await isar.users.where().filter().usernameEqualTo(username).findFirst();
+  // Uncomment if you have roles stored in Firestore
+  // static Future<String?> getUserRole(String username) async {
+  //   final querySnapshot = await usersCollection.where('username', isEqualTo: username).limit(1).get();
+  //   if (querySnapshot.docs.isEmpty) {
+  //     return null;
+  //   } else {
+  //     final doc = querySnapshot.docs.first;
+  //     return doc.data()['role'] as String?;
+  //   }
+  // }
+
+  static Future<void> addUser(Map<String, dynamic> user) async {
+    await usersCollection.add(user);
   }
 
-  static Future<void> addUser(User user) async {
-    final isar = DatabaseService.isar;
-    await isar.writeTxn(() async {
-      await isar.users.put(user);
-    });
+  static Future<void> updateUser(String id, Map<String, dynamic> user) async {
+    await usersCollection.doc(id).update(user);
   }
 }

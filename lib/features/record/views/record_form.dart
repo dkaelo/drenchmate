@@ -1,15 +1,16 @@
+import 'package:drenchmate/features/chemical/controllers/drench_group_controller.dart';
+import 'package:drenchmate/features/chemical/models/drench_group.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:drenchmate/features/record/controllers/record_controller.dart';
-import 'package:drenchmate/features/chemical/controllers/chemical_controller.dart';
-import 'package:drenchmate/features/user/controllers/user_controller.dart';
-import 'package:drenchmate/features/record/models/record.dart';
-import 'package:drenchmate/features/chemical/models/chemical.dart';
+import '../controllers/record_controller.dart';
+import '../models/record.dart';
+import '../../user/controllers/user_controller.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RecordForm extends StatefulWidget {
   final Record? record;
 
-  const RecordForm({super.key, this.record});
+  const RecordForm({Key? key, this.record}) : super(key: key);
 
   @override
   _RecordFormState createState() => _RecordFormState();
@@ -17,109 +18,104 @@ class RecordForm extends StatefulWidget {
 
 class _RecordFormState extends State<RecordForm> {
   final _formKey = GlobalKey<FormState>();
-  final dateOfTreatmentController = TextEditingController();
-  final numberOfAnimalsTreatedController = TextEditingController();
-  final mobIdController = TextEditingController();
-  final animalDetailsController = TextEditingController();
-  final productNameController = TextEditingController();
-  final activeIngredientController = TextEditingController();
-  final treatmentRateController = TextEditingController();
-  final esiController = TextEditingController();
-  final withholdingPeriodController = TextEditingController();
-  final batchNumberController = TextEditingController();
-  final expiryDateController = TextEditingController();
-  final personAdministeringController = TextEditingController();
+  final _dateOfTreatmentController = TextEditingController();
+  final _numberOfAnimalsTreatedController = TextEditingController();
+  final _mobIdController = TextEditingController();
+  final _animalDetailsController = TextEditingController();
+  final _treatmentRateController = TextEditingController();
+  final _personAdministeringController = TextEditingController();
 
-  Chemical? _selectedChemical;
+  DrenchGroup? _selectedDrenchGroup;
 
   @override
   void initState() {
     super.initState();
-    final chemicalController = Provider.of<ChemicalController>(context, listen: false);
-    chemicalController.fetchChemicals();
-
     final userController = Provider.of<UserController>(context, listen: false);
-    personAdministeringController.text = userController.username ?? '';
-
     if (widget.record != null) {
-      dateOfTreatmentController.text = widget.record!.dateOfTreatment.toLocal().toString().split('T')[0];
-      numberOfAnimalsTreatedController.text = widget.record!.numberOfAnimalsTreated.toString();
-      mobIdController.text = widget.record!.mobId;
-      animalDetailsController.text = widget.record!.animalDetails;
-      productNameController.text = widget.record!.productName;
-      activeIngredientController.text = widget.record!.activeIngredient;
-      treatmentRateController.text = widget.record!.treatmentRate.toString();
-      esiController.text = widget.record!.esi.toString();
-      withholdingPeriodController.text = widget.record!.withholdingPeriod.toString();
-      batchNumberController.text = widget.record!.batchNumber ?? '';
-      expiryDateController.text = widget.record!.expiryDate?.toLocal().toString().split('T')[0] ?? '';
-      personAdministeringController.text = widget.record!.personAdministering ?? userController.username ?? '';
+      _dateOfTreatmentController.text = widget.record!.dateOfTreatment.toIso8601String().split('T').first;
+      _numberOfAnimalsTreatedController.text = widget.record!.numberOfAnimalsTreated.toString();
+      _mobIdController.text = widget.record!.mobId;
+      _animalDetailsController.text = widget.record!.animalDetails;
+      _treatmentRateController.text = widget.record!.treatmentRate.toString();
+      _personAdministeringController.text = widget.record!.personAdministering;
+      _selectedDrenchGroup = widget.record!.drenchGroup;
+    } else {
+      _fetchDisplayName(userController.username);
+    }
+    _fetchDrenchGroups();
+  }
+
+  Future<void> _fetchDisplayName(String? email) async {
+    if (email != null) {
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(email).get();
+      if (userDoc.exists) {
+        final userData = userDoc.data()!;
+        setState(() {
+          _personAdministeringController.text = userData['displayName'] as String;
+        });
+      }
     }
   }
 
-  @override
-  void dispose() {
-    dateOfTreatmentController.dispose();
-    numberOfAnimalsTreatedController.dispose();
-    mobIdController.dispose();
-    animalDetailsController.dispose();
-    productNameController.dispose();
-    activeIngredientController.dispose();
-    treatmentRateController.dispose();
-    esiController.dispose();
-    withholdingPeriodController.dispose();
-    batchNumberController.dispose();
-    expiryDateController.dispose();
-    personAdministeringController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _selectDate(BuildContext context, TextEditingController controller) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-    );
-    if (picked != null) {
-      setState(() {
-        controller.text = picked.toIso8601String().split('T')[0];
-      });
+  Future<void> _fetchDrenchGroups() async {
+    final drenchGroupController = Provider.of<DrenchGroupController>(context, listen: false);
+    await drenchGroupController.fetchDrenchGroups();
+    if (_selectedDrenchGroup != null) {
+      // Ensure the selected drench group is in the list of fetched groups
+      if (!drenchGroupController.drenchGroups.contains(_selectedDrenchGroup)) {
+        setState(() {
+          _selectedDrenchGroup = null;
+        });
+      }
     }
+    setState(() {}); // Force rebuild to update dropdown items
   }
 
   @override
   Widget build(BuildContext context) {
-    final recordController = Provider.of<RecordController>(context);
-    final chemicalController = Provider.of<ChemicalController>(context);
-    final userController = Provider.of<UserController>(context);
+    final drenchGroupController = Provider.of<DrenchGroupController>(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.record == null ? 'Create Record' : 'Edit Record')),
+      appBar: AppBar(
+        title: const Text('Add Record'),
+        centerTitle: true,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: ListView(
             children: [
-              TextFormField(
-                controller: dateOfTreatmentController,
-                decoration: InputDecoration(
-                  labelText: 'Date of Treatment',
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.calendar_today),
-                    onPressed: () => _selectDate(context, dateOfTreatmentController),
+              GestureDetector(
+                onTap: () async {
+                  DateTime? pickedDate = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2101),
+                  );
+                  if (pickedDate != null) {
+                    setState(() {
+                      _dateOfTreatmentController.text = pickedDate.toIso8601String().split('T').first;
+                    });
+                  }
+                },
+                child: AbsorbPointer(
+                  child: TextFormField(
+                    controller: _dateOfTreatmentController,
+                    decoration: const InputDecoration(labelText: 'Date of Treatment'),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a date of treatment';
+                      }
+                      return null;
+                    },
                   ),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a date';
-                  }
-                  return null;
-                },
               ),
+              const SizedBox(height: 20),
               TextFormField(
-                controller: numberOfAnimalsTreatedController,
+                controller: _numberOfAnimalsTreatedController,
                 decoration: const InputDecoration(labelText: 'Number of Animals Treated'),
                 keyboardType: TextInputType.number,
                 validator: (value) {
@@ -129,54 +125,67 @@ class _RecordFormState extends State<RecordForm> {
                   return null;
                 },
               ),
+              const SizedBox(height: 20),
               TextFormField(
-                controller: mobIdController,
+                controller: _mobIdController,
                 decoration: const InputDecoration(labelText: 'Mob ID'),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter the mob ID';
+                    return 'Please enter a mob ID';
                   }
                   return null;
                 },
               ),
+              const SizedBox(height: 20),
+              DropdownButtonFormField<DrenchGroup>(
+                value: _selectedDrenchGroup,
+                decoration: const InputDecoration(labelText: 'Drench Group'),
+                items: drenchGroupController.drenchGroups.map((drenchGroup) {
+                  return DropdownMenuItem<DrenchGroup>(
+                    value: drenchGroup,
+                    child: Text(drenchGroup.name),
+                  );
+                }).toList(),
+                onChanged: (DrenchGroup? newValue) {
+                  setState(() {
+                    _selectedDrenchGroup = newValue;
+                  });
+                },
+                validator: (value) {
+                  if (value == null) {
+                    return 'Please select a drench group';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+              if (_selectedDrenchGroup != null)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: _selectedDrenchGroup!.chemicals.map((chemical) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Text(
+                        'Chemical: ${chemical.chemicalName}, Active Ingredient: ${chemical.activeIngredient}, ESI: ${chemical.esi} days, Withholding Period: ${chemical.withholdingPeriod} days',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    );
+                  }).toList(),
+                ),
+              const SizedBox(height: 20),
               TextFormField(
-                controller: animalDetailsController,
+                controller: _animalDetailsController,
                 decoration: const InputDecoration(labelText: 'Animal Details'),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter the animal details';
+                    return 'Please enter animal details';
                   }
                   return null;
                 },
               ),
-              DropdownButtonFormField<Chemical>(
-                decoration: const InputDecoration(labelText: 'Product Name'),
-                items: chemicalController.currentChemicals.map((Chemical chemical) {
-                  return DropdownMenuItem<Chemical>(
-                    value: chemical,
-                    child: Text(chemical.chemicalName),
-                  );
-                }).toList(),
-                onChanged: (Chemical? newValue) {
-                  setState(() {
-                    _selectedChemical = newValue;
-                    if (newValue != null) {
-                      productNameController.text = newValue.chemicalName;
-                      activeIngredientController.text = newValue.activeIngredient;
-                      esiController.text = newValue.esi.toString();
-                      withholdingPeriodController.text = newValue.withholdingPeriod.toString();
-                    }
-                  });
-                },
-                value: _selectedChemical,
-              ),
+              const SizedBox(height: 20),
               TextFormField(
-                controller: activeIngredientController,
-                decoration: const InputDecoration(labelText: 'Active Ingredient'),
-                readOnly: true,
-              ),
-              TextFormField(
-                controller: treatmentRateController,
+                controller: _treatmentRateController,
                 decoration: const InputDecoration(labelText: 'Treatment Rate'),
                 keyboardType: TextInputType.number,
                 validator: (value) {
@@ -186,62 +195,42 @@ class _RecordFormState extends State<RecordForm> {
                   return null;
                 },
               ),
+              const SizedBox(height: 20),
               TextFormField(
-                controller: esiController,
-                decoration: const InputDecoration(labelText: 'ESI'),
-                readOnly: true,
-              ),
-              TextFormField(
-                controller: withholdingPeriodController,
-                decoration: const InputDecoration(labelText: 'Withholding Period'),
-                readOnly: true,
-              ),
-              TextFormField(
-                controller: batchNumberController,
-                decoration: const InputDecoration(labelText: 'Batch Number'),
-              ),
-              TextFormField(
-                controller: expiryDateController,
-                decoration: InputDecoration(
-                  labelText: 'Expiry Date',
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.calendar_today),
-                    onPressed: () => _selectDate(context, expiryDateController),
-                  ),
-                ),
-              ),
-              TextFormField(
-                controller: personAdministeringController,
+                controller: _personAdministeringController,
                 decoration: const InputDecoration(labelText: 'Person Administering'),
                 readOnly: true,
-                enabled: false,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter the name of the person administering';
+                  }
+                  return null;
+                },
               ),
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
-                    final newRecord = Record()
-                      ..dateOfTreatment = DateTime.parse(dateOfTreatmentController.text)
-                      ..numberOfAnimalsTreated = int.parse(numberOfAnimalsTreatedController.text)
-                      ..mobId = mobIdController.text
-                      ..animalDetails = animalDetailsController.text
-                      ..productName = productNameController.text
-                      ..activeIngredient = activeIngredientController.text
-                      ..treatmentRate = double.parse(treatmentRateController.text)
-                      ..esi = int.parse(esiController.text)
-                      ..withholdingPeriod = int.parse(withholdingPeriodController.text)
-                      ..batchNumber = batchNumberController.text.isNotEmpty ? batchNumberController.text : null
-                      ..expiryDate = expiryDateController.text.isNotEmpty ? DateTime.parse(expiryDateController.text) : null
-                      ..personAdministering = personAdministeringController.text;
-
+                    final newRecord = Record(
+                      id: widget.record?.id ?? '',
+                      dateOfTreatment: DateTime.parse(_dateOfTreatmentController.text),
+                      numberOfAnimalsTreated: int.parse(_numberOfAnimalsTreatedController.text),
+                      mobId: _mobIdController.text,
+                      animalDetails: _animalDetailsController.text,
+                      drenchGroup: _selectedDrenchGroup!,
+                      treatmentRate: double.parse(_treatmentRateController.text),
+                      personAdministering: _personAdministeringController.text,
+                    );
+                    final recordController = Provider.of<RecordController>(context, listen: false);
                     if (widget.record == null) {
                       recordController.addRecord(newRecord);
                     } else {
-                      recordController.updateRecord(widget.record!.id, newRecord);
+                      recordController.updateRecord(newRecord.id, newRecord);
                     }
                     Navigator.pop(context);
                   }
                 },
-                child: Text(widget.record == null ? 'Create Record' : 'Update Record'),
+                child: Text(widget.record == null ? 'Save Record' : 'Update Record'),
               ),
             ],
           ),

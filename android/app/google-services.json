@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "747750029310",
+    "project_id": "drenchmate-6f39c",
+    "storage_bucket": "drenchmate-6f39c.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:747750029310:android:3c636d51446ca65dd132af",
+        "android_client_info": {
+          "package_name": "com.deadsx.drenchmate"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBOVGFMawYK7wKIi8KXW0letwzSpxnMmFM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:747750029310:android:45ef6aa56e0a19dfd132af",
+        "android_client_info": {
+          "package_name": "com.deadx.drenchmate"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBOVGFMawYK7wKIi8KXW0letwzSpxnMmFM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

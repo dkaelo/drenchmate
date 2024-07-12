@@ -15,12 +15,12 @@ class ChemicalController extends ChangeNotifier {
     fetchChemicals();
   }
 
-  void updateChemical(int id, Chemical chemical) async {
+  void updateChemical(String id, Chemical chemical) async {
     await ChemicalDatabase.updateChemical(id, chemical);
     fetchChemicals();
   }
 
-  void deleteChemical(int id) async {
+  void deleteChemical(String id) async {
     await ChemicalDatabase.deleteChemical(id);
     fetchChemicals();
   }

@@ -1,33 +1,26 @@
-import 'package:isar/isar.dart';
-import 'package:drenchmate/services/database_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'chemical.dart';
 
 class ChemicalDatabase {
+  static final CollectionReference chemicalsCollection =
+      FirebaseFirestore.instance.collection('chemicals');
+
   static Future<List<Chemical>> fetchChemicals() async {
-    return await DatabaseService.isar.chemicals.where().findAll();
+    final querySnapshot = await chemicalsCollection.get();
+    return querySnapshot.docs.map((doc) {
+      return Chemical.fromFirestore(doc.data() as Map<String, dynamic>, doc.id);
+    }).toList();
   }
 
   static Future<void> addChemical(Chemical chemical) async {
-    await DatabaseService.isar.writeTxn(() async {
-      await DatabaseService.isar.chemicals.put(chemical);
-    });
+    await chemicalsCollection.add(chemical.toFirestore());
   }
 
-  static Future<void> updateChemical(int id, Chemical chemical) async {
-    final existingChemical = await DatabaseService.isar.chemicals.get(id);
-    if (existingChemical != null) {
-      existingChemical
-        ..chemicalName = chemical.chemicalName
-        ..exterminator = chemical.exterminator
-        ..activeIngredient = chemical.activeIngredient
-        ..esi = chemical.esi
-        ..withholdingPeriod = chemical.withholdingPeriod;
-
-      await DatabaseService.isar.writeTxn(() => DatabaseService.isar.chemicals.put(existingChemical));
-    }
+  static Future<void> updateChemical(String id, Chemical chemical) async {
+    await chemicalsCollection.doc(id).update(chemical.toFirestore());
   }
 
-  static Future<void> deleteChemical(int id) async {
-    await DatabaseService.isar.writeTxn(() => DatabaseService.isar.chemicals.delete(id));
+  static Future<void> deleteChemical(String id) async {
+    await chemicalsCollection.doc(id).delete();
   }
 }

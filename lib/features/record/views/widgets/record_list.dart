@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:drenchmate/features/record/controllers/record_controller.dart';
-import 'package:drenchmate/features/record/models/record.dart';
 import 'package:drenchmate/features/record/views/record_form.dart';
+import 'package:drenchmate/features/record/models/record.dart';
 
 class RecordList extends StatelessWidget {
   const RecordList({super.key});
@@ -39,57 +39,122 @@ class RecordList extends StatelessWidget {
     );
   }
 
+  void _showMoreOptions(BuildContext context, Record record, Offset offset) async {
+    final result = await showMenu(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        offset.dx,
+        offset.dy,
+        offset.dx + 50.0,
+        offset.dy + 50.0,
+      ),
+      items: [
+        PopupMenuItem(
+          value: 'edit',
+          child: Row(
+            children: const [
+              Icon(Icons.edit),
+              SizedBox(width: 8),
+              Text('Edit'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'delete',
+          child: Row(
+            children: const [
+              Icon(Icons.delete),
+              SizedBox(width: 8),
+              Text('Delete'),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    if (result != null) {
+      if (result == 'edit') {
+        _editRecord(context, record);
+      } else if (result == 'delete') {
+        _confirmDelete(context, record);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final recordController = Provider.of<RecordController>(context);
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        columns: const [
-          DataColumn(label: Text('Product Name')),
-          DataColumn(label: Text('Date of Treatment')),
-          DataColumn(label: Text('Number of Animals Treated')),
-          DataColumn(label: Text('Mob ID')),
-          DataColumn(label: Text('Animal Details')),
-          DataColumn(label: Text('Active Ingredient')),
-          DataColumn(label: Text('Treatment Rate')),
-          DataColumn(label: Text('ESI')),
-          DataColumn(label: Text('Withholding Period')),
-          DataColumn(label: Text('Batch Number')),
-          DataColumn(label: Text('Expiry Date')),
-          DataColumn(label: Text('Person Administering')),
-          DataColumn(label: Text('Actions')),
-        ],
-        rows: recordController.currentRecords.map((record) {
-          return DataRow(cells: [
-            DataCell(Text(record.productName)),
-            DataCell(Text(record.dateOfTreatment.toLocal().toString().split(' ')[0])),
-            DataCell(Text(record.numberOfAnimalsTreated.toString())),
-            DataCell(Text(record.mobId)),
-            DataCell(Text(record.animalDetails)),
-            DataCell(Text(record.activeIngredient)),
-            DataCell(Text(record.treatmentRate.toString())),
-            DataCell(Text(record.esi.toString())),
-            DataCell(Text(record.withholdingPeriod.toString())),
-            DataCell(Text(record.batchNumber ?? '')),
-            DataCell(Text(record.expiryDate?.toLocal().toString().split(' ')[0] ?? '')),
-            DataCell(Text(record.personAdministering ?? '')),
-            DataCell(Row(
+    return ListView.builder(
+      itemCount: recordController.currentRecords.length,
+      itemBuilder: (context, index) {
+        final record = recordController.currentRecords[index];
+        final activeIngredients = record.drenchGroup.chemicals
+            .map((chemical) => chemical.activeIngredient)
+            .join(', ');
+
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () => _editRecord(context, record),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Date of Treatment: ${record.dateOfTreatment.toLocal().toString().split(' ')[0]}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    Builder(
+                      builder: (context) {
+                        return IconButton(
+                          icon: const Icon(Icons.more_vert),
+                          onPressed: () {
+                            final RenderBox button = context.findRenderObject() as RenderBox;
+                            final Offset offset = button.localToGlobal(Offset.zero);
+                            _showMoreOptions(context, record, offset);
+                          },
+                        );
+                      },
+                    ),
+                  ],
                 ),
-                IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: () => _confirmDelete(context, record),
+                const SizedBox(height: 4),
+                Text(
+                  'Number of Animals Treated: ${record.numberOfAnimalsTreated}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                Text(
+                  'Mob ID: ${record.mobId}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                Text(
+                  'Animal Details: ${record.animalDetails}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                Text(
+                  'Drench Group: ${record.drenchGroup.name}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                Text(
+                  'Active Ingredients: $activeIngredients',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                Text(
+                  'Treatment Rate: ${record.treatmentRate}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                Text(
+                  'Person Administering: ${record.personAdministering}',
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
-            )),
-          ]);
-        }).toList(),
-      ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

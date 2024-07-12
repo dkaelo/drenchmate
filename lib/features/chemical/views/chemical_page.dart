@@ -21,10 +21,6 @@ class _ChemicalPageState extends State<ChemicalPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chemicals'),
-        centerTitle: true,
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.push(
           context,
